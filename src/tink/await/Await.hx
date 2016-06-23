@@ -22,10 +22,9 @@ class Await {
 		SyntaxHub.classLevel.after(
 			function (_) return true,
 			function (c: ClassBuilder) {
-				if (c.target.isInterface && !appliesTo(c.target.meta))
-					return false;
 				
 				if (!appliesTo(c.target.meta)) {
+					if(c.target.isInterface) return false;
 					for (i in c.target.interfaces)
 						if (appliesTo(i.t.get().meta)) {
 							applyTo(c);

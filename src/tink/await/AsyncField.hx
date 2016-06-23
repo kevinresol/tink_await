@@ -19,6 +19,11 @@ typedef AsyncContext = {
 
 class AsyncField {
 	
+	#if tink_await_cache
+	// TODO: this may lead to potential memory leak? if the compilation server has run long enough...
+	static var cache = new Map<String, Function>();
+	#end
+	
 	var func: Function;
 	var expr: Expr;
 	var asyncReturn: Bool;
@@ -30,10 +35,15 @@ class AsyncField {
 	}
 	
 	public function transform(): Function {
+		#if tink_await_cache
+		var signature = Context.signature(expr);
+		if(cache.exists(signature))
+			return cache.get(signature);
+		#end
 		var unknown = expr.pos.makeBlankType();
 		var type = func.ret == null ? unknown : func.ret;
 		var err = (macro: Dynamic);
-		return {
+		var result = {
 			args: func.args,
 			params: func.params,
 			ret: !asyncReturn || func.ret == null ? func.ret : (macro: tink.core.Future<tink.core.Outcome<$type, $err>>),
@@ -51,6 +61,10 @@ class AsyncField {
 				else
 					process(expr, {asyncReturn: false, needsResult: false}, function(e) return e)
 		};
+		#if tink_await_cache
+		cache.set(signature, result);
+		#end
+		return result;
 	}	
 		
 	function hasAwait(?el: Array<Expr>, ?e: Expr): Bool {
